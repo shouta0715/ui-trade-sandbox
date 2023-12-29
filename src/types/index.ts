@@ -8,8 +8,14 @@ type MIMETYPE =
   | typeof CSS_MIME_TYPE
   | typeof JAVASCRIPT_MIME_TYPE;
 
-export type FileObject = {
+export type TransformedFile = {
   content: string;
   mimeType: MIMETYPE;
   extension: Extension;
+  originallyExtension?: Extension;
+};
+
+export type SuccessTransformedData = {
+  componentName: string | null;
+  files: TransformedFile[];
 };

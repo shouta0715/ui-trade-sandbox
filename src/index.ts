@@ -1,37 +1,25 @@
-import { FileObject } from "./types/index";
+/* eslint-disable class-methods-use-this */
+/* eslint-disable max-classes-per-file */
+import { MessageHandler } from "./scripts/message/index";
 
-async function onMessage(event: MessageEvent) {
-  console.log("Message received", event);
-  if (event.origin !== "http://localhost:3000") {
-    console.log("Message not from localhost:3000");
-
-    return;
+class IframeWorker {
+  // eslint-disable-next-line class-methods-use-this
+  run() {
+    this.configure();
   }
 
-  const data = JSON.parse(event.data) as FileObject[];
+  // eslint-disable-next-line class-methods-use-this
+  private eventHandler(event: MessageEvent) {
+    const handler = new MessageHandler(event);
 
-  const mainFile = data[0];
+    return handler.onMessage();
+  }
 
-  if (!event.source) throw new Error("No event source");
-
-  document.open();
-
-  document.write(mainFile.content);
-
-  document.close();
-
-  console.log("Message sent", event.source);
-  const message = JSON.stringify({
-    height: 800,
-  });
-
-  event.source.postMessage(message, {
-    targetOrigin: event.origin,
-  });
+  private configure() {
+    window.addEventListener("message", this.eventHandler, false);
+  }
 }
 
-function init() {
-  window.addEventListener("message", onMessage, false);
-}
+const worker = new IframeWorker();
 
-init();
+worker.run();
