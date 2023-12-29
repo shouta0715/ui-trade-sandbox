@@ -1,31 +1,15 @@
 {
   "name": "ui-trade-sandbox",
-  "version": "1.0.0",
-  "description": "",
-  "main": "index.ts",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "dev": "vite",
+    "build": "tsc && vite build",
+    "preview": "vite preview"
   },
-  "repository": {
-    "type": "git",
-    "url": "git+https://github.com/shouta0715/ui-trade-sandbox.git"
-  },
-  "author": "",
-  "license": "ISC",
-  "bugs": {
-    "url": "https://github.com/shouta0715/ui-trade-sandbox/issues"
-  },
-  "homepage": "https://github.com/shouta0715/ui-trade-sandbox#readme",
   "devDependencies": {
-    "eslint-config-airbnb": "^19.0.4",
-    "eslint-config-airbnb-typescript": "^17.1.0",
-    "eslint-config-prettier": "^9.1.0",
-    "eslint-plugin-import": "^2.29.1",
-    "eslint-plugin-unused-imports": "^3.0.0",
-    "typescript": "^5.3.3"
-  },
-  "dependencies": {
-    "eslint": "^8.56.0",
-    "prettier": "^3.1.1"
+    "typescript": "^5.2.2",
+    "vite": "^5.0.8"
   }
 }
