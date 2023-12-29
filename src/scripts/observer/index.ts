@@ -21,7 +21,7 @@ export class RenderObserver {
       const observer = new MutationObserver(() => {
         const newHeight = body.offsetHeight;
 
-        if (height !== newHeight) {
+        if (height <= newHeight) {
           const correctHeight = Math.min(
             Math.max(newHeight, this.MIN_HEIGHT),
             this.MAX_HEIGHT

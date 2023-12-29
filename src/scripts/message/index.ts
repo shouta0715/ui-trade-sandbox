@@ -1,4 +1,8 @@
-import { BlobInfo, SuccessTransformedData } from "../../types/index";
+import {
+  BlobInfo,
+  SuccessTransformedData,
+  TransformedFile,
+} from "../../types/index";
 import { BlobHandler } from "../blob/index";
 import { DocumentWriter } from "../dom/index";
 import { RenderObserver } from "../observer/index";
@@ -12,42 +16,67 @@ export class MessageHandler {
 
   private cleanups: (() => void)[] = [];
 
-  constructor(private event: MessageEvent) {
+  private componentName: string | null = null;
+
+  private mainBlobURL: string = "";
+
+  private files: TransformedFile[] = [];
+
+  constructor() {
     this.renderObserver = new RenderObserver();
     this.blobHandler = new BlobHandler();
+    this.onMessage = this.onMessage.bind(this);
+
+    this.configure();
   }
 
-  private parseData() {
-    const { files, componentName } = JSON.parse(
-      this.event.data
-    ) as SuccessTransformedData;
+  private parseData(event: MessageEvent) {
+    const data = JSON.parse(event.data) as SuccessTransformedData;
 
-    const blobs = this.blobHandler.createObjectURs(files);
+    const blobs = this.blobHandler.createObjectURs(
+      data.action === "render" ? data.files : this.files
+    );
 
     this.blobs = blobs;
-    const mainBlobURL = blobs[0].url;
+    this.mainBlobURL = blobs[0].url;
+    if (data.action !== "render") return { action: data.action };
+
+    this.componentName = data.componentName;
+
+    this.files = data.files;
 
     return {
       blobs,
-      componentName,
-      mainBlobURL,
+      componentName: data.componentName,
+      mainBlobURL: blobs[0].url,
+      action: data.action,
     };
   }
 
-  async onMessage() {
-    if (this.event.origin !== "http://localhost:3000") return;
+  async onMessage(event: MessageEvent) {
+    if (event.origin !== "http://localhost:3000") return;
 
-    const { componentName, mainBlobURL } = this.parseData();
+    const data = this.parseData(event);
 
-    this.writeDocument(componentName, mainBlobURL, this.blobs);
+    if (data.action === "reload") {
+      this.reWriteDocument();
+      await this.reloadPostParentMessage(event);
 
-    await this.postParentMessage();
+      this.blobHandler.revokeObjectURLs(this.blobs.map((blob) => blob.url));
+      this.cleanups.forEach((cleanup) => cleanup());
+
+      return;
+    }
+
+    this.writeDocument();
+
+    await this.renderPostParentMessage(event);
     this.blobHandler.revokeObjectURLs(this.blobs.map((blob) => blob.url));
     this.cleanups.forEach((cleanup) => cleanup());
   }
 
-  private async postParentMessage() {
-    if (!this.event.source) throw new Error("No event source");
+  private async renderPostParentMessage(event: MessageEvent) {
+    if (!event.source) throw new Error("No event source");
 
     const height = await this.renderObserver.stopCompleteRendered();
 
@@ -56,21 +85,53 @@ export class MessageHandler {
       message: "rendered",
     });
 
-    this.event.source.postMessage(message, {
-      targetOrigin: this.event.origin,
+    event.source.postMessage(message, {
+      targetOrigin: event.origin,
+    });
+  }
+
+  private async reloadPostParentMessage(event: MessageEvent) {
+    if (!event.source) throw new Error("No event source");
+
+    await this.renderObserver.stopCompleteRendered();
+
+    const message = JSON.stringify({
+      message: "reload",
+    });
+
+    event.source.postMessage(message, {
+      targetOrigin: event.origin,
     });
   }
 
   // eslint-disable-next-line class-methods-use-this
-  private writeDocument(
-    componentName: string | null,
-    mainBlobURL: string,
-    blobURLs: BlobInfo[]
-  ) {
-    const writer = new DocumentWriter(mainBlobURL, componentName, blobURLs);
+  private writeDocument() {
+    const writer = new DocumentWriter(
+      "render",
+      this.mainBlobURL,
+      this.componentName,
+      this.blobs
+    );
 
     const cleanups = writer.writeDocument();
 
     cleanups.forEach((cleanup) => this.cleanups.push(cleanup));
+  }
+
+  private reWriteDocument() {
+    const writer = new DocumentWriter(
+      "reload",
+      this.mainBlobURL,
+      this.componentName,
+      this.blobs
+    );
+
+    const cleanups = writer.writeDocument();
+
+    cleanups.forEach((cleanup) => this.cleanups.push(cleanup));
+  }
+
+  private configure() {
+    window.addEventListener("message", this.onMessage, false);
   }
 }

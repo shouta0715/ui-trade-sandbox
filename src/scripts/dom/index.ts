@@ -1,7 +1,7 @@
 /* eslint-disable no-param-reassign */
 /* eslint-disable class-methods-use-this */
 /* eslint-disable max-classes-per-file */
-import { BlobInfo } from "../../types";
+import { BlobInfo, MessageAction } from "../../types";
 import { BlobHandler } from "../blob";
 
 class ElementHandler {
@@ -48,11 +48,9 @@ class ReactCodeHandler {
   }
 
   renderReact() {
-    const body = document.querySelector("body") as HTMLBodyElement;
-    const root = document.createElement("div");
-    root.id = "root";
+    const root = document.querySelector("#root") as HTMLDivElement;
 
-    body.appendChild(root);
+    if (!root) throw new Error("No root");
 
     const importStatement = this.getImportStatement();
     const renderReact = this.getRenderReact();
@@ -67,6 +65,7 @@ export class DocumentWriter {
   private cleanups: (() => void)[] = [];
 
   constructor(
+    private action: MessageAction,
     private mainBlobURL: string,
     private componentName?: string | null,
     private blobs: BlobInfo[] = []
@@ -119,13 +118,16 @@ export class DocumentWriter {
     );
 
     const html = new DOMParser().parseFromString(blobHTML.content, "text/html");
+    const root = document.querySelector("#root") as HTMLDivElement;
+
+    if (!root) throw new Error("No root");
 
     const inputBody = html.querySelector("body") as HTMLBodyElement;
 
     const elementHandler = new ElementHandler(
       "beforeend",
       inputBody.innerHTML,
-      document.body
+      root
     );
 
     elementHandler.insertAdjacentHTML();
@@ -155,7 +157,19 @@ export class DocumentWriter {
     this.cleanups.push(() => blobHandler.revokeObjectURLs([blob.url]));
   }
 
-  writeDocument() {
+  private reWriteDocument() {
+    const body = document.querySelector("body") as HTMLBodyElement;
+
+    if (!body) throw new Error("No app");
+
+    const scripts = body.querySelectorAll("script");
+
+    scripts.forEach((script) => {
+      if (!script.src.startsWith("blob")) return;
+
+      script.remove();
+    });
+
     if (this.componentName === null) {
       this.writeHTMLDocument();
 
@@ -164,6 +178,32 @@ export class DocumentWriter {
 
     if (this.componentName !== null) {
       this.writeReactDocument();
+
+      return this.cleanups;
+    }
+
+    return this.cleanups;
+  }
+
+  writeDocument() {
+    if (this.action === "reload") {
+      if (!this.mainBlobURL) throw new Error("No main blob url");
+
+      this.reWriteDocument();
+
+      return this.cleanups;
+    }
+
+    if (this.componentName === null) {
+      this.writeHTMLDocument();
+
+      return this.cleanups;
+    }
+
+    if (this.componentName !== null) {
+      this.writeReactDocument();
+
+      return this.cleanups;
     }
 
     return this.cleanups;

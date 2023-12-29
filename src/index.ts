@@ -11,14 +11,10 @@ class IframeWorker {
   }
 
   // eslint-disable-next-line class-methods-use-this
-  private eventHandler(event: MessageEvent) {
-    const handler = new MessageHandler(event);
-
-    return handler.onMessage();
-  }
 
   private configure() {
-    window.addEventListener("message", this.eventHandler, false);
+    // eslint-disable-next-line no-new
+    new MessageHandler();
   }
 }
 
