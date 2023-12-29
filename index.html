@@ -3,11 +3,15 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="stylesheet" href="/src/style.css" />
     <title>UI TRADE SANDBOX</title>
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="default-src 'none'; script-src 'self' blob: https://esm.sh/ https://cdn.tailwindcss.com/; style-src 'unsafe-inline' blob:; connect-src blob:"
+    />
   </head>
   <body>
     <script type="module" src="/src/index.ts"></script>
     <script src="https://cdn.tailwindcss.com"></script>
-
   </body>
 </html>
