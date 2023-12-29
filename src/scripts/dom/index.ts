@@ -1,16 +1,33 @@
+/* eslint-disable no-param-reassign */
+/* eslint-disable class-methods-use-this */
 /* eslint-disable max-classes-per-file */
+import { BlobInfo } from "../../types";
+import { BlobHandler } from "../blob";
+
 class ElementHandler {
   constructor(
-    private parent: HTMLElement,
     private position: InsertPosition,
-    private code: string
+    private code?: string,
+    private parent: HTMLElement | null = null
   ) {}
 
-  insertAdjacentCode() {
+  insertAdjacentCode(cn?: (h: HTMLScriptElement) => void) {
+    const body = document.querySelector("body") as HTMLBodyElement;
     const element = document.createElement("script");
-    element.textContent = this.code;
+
     element.type = "module";
-    this.parent.insertAdjacentElement(this.position, element);
+    element.defer = true;
+
+    cn?.(element);
+    body.insertAdjacentElement(this.position, element);
+  }
+
+  insertAdjacentHTML() {
+    if (this.parent === null) throw new Error("No parent");
+
+    if (!this.code) throw new Error("No code");
+
+    this.parent.insertAdjacentHTML(this.position, this.code);
   }
 }
 
@@ -20,53 +37,135 @@ class ReactCodeHandler {
     private componentName: string
   ) {}
 
-  getImportStatement() {
+  private getImportStatement() {
     const reactImport = `import React from "https://esm.sh/react";\nimport { render } from "https://esm.sh/react-dom";\n`;
 
     return `${reactImport}import ${this.componentName} from "${this.blobUrl}";\n`;
   }
 
-  getRenderReact() {
+  private getRenderReact() {
     return `render(React.createElement(${this.componentName},null), document.getElementById("root"));`;
   }
-}
 
-export class DocumentWriter {
-  constructor(
-    private mainBlobURL: string,
-    private componentName?: string | null
-  ) {}
-
-  private writeHTMLDocument() {}
-
-  private writeReactDocument() {
-    if (!this.componentName) throw new Error("No component name");
-
+  renderReact() {
     const body = document.querySelector("body") as HTMLBodyElement;
     const root = document.createElement("div");
     root.id = "root";
 
     body.appendChild(root);
 
+    const importStatement = this.getImportStatement();
+    const renderReact = this.getRenderReact();
+
+    const code = `${importStatement}\n${renderReact}`;
+
+    return code;
+  }
+}
+
+export class DocumentWriter {
+  private cleanups: (() => void)[] = [];
+
+  constructor(
+    private mainBlobURL: string,
+    private componentName?: string | null,
+    private blobs: BlobInfo[] = []
+  ) {}
+
+  private insertCSS(url: string) {
+    const parent = document.querySelector("head") as HTMLHeadElement;
+    const element = document.createElement("link");
+    element.rel = "stylesheet";
+    element.href = url;
+
+    new ElementHandler(
+      "beforeend",
+      element.outerHTML,
+      parent
+    ).insertAdjacentHTML();
+  }
+
+  private insertJS(url: string) {
+    const cn = (el: HTMLScriptElement) => {
+      el.src = url;
+    };
+
+    new ElementHandler("beforeend").insertAdjacentCode(cn);
+  }
+
+  private insertAssets(assets: (BlobInfo & { content: string })[]) {
+    assets.forEach((asset) => {
+      if (asset.extension === "css") this.insertCSS(asset.url);
+
+      if (asset.extension === "js") this.insertJS(asset.url);
+    });
+  }
+
+  private async writeHTMLDocument() {
+    const [blobHTML, ...others] = await Promise.all(
+      this.blobs.map((blob) =>
+        fetch(blob.url).then(async (res) => {
+          if (!res.ok) throw new Error("Blob not found");
+
+          const content = await res.text();
+
+          return {
+            extension: blob.extension,
+            content,
+            url: blob.url,
+          };
+        })
+      )
+    );
+
+    const html = new DOMParser().parseFromString(blobHTML.content, "text/html");
+
+    const inputBody = html.querySelector("body") as HTMLBodyElement;
+
+    const elementHandler = new ElementHandler(
+      "beforeend",
+      inputBody.innerHTML,
+      document.body
+    );
+
+    elementHandler.insertAdjacentHTML();
+    this.insertAssets(others);
+  }
+
+  private writeReactDocument() {
+    if (!this.componentName) throw new Error("No component name");
+
     const reactCodeHandler = new ReactCodeHandler(
       this.mainBlobURL,
       this.componentName
     );
-    const importStatement = reactCodeHandler.getImportStatement();
-    const renderReact = reactCodeHandler.getRenderReact();
 
-    const code = `${importStatement}\n${renderReact}`;
+    const code = reactCodeHandler.renderReact();
+    const blobHandler = new BlobHandler();
 
-    new ElementHandler(body, "beforeend", code).insertAdjacentCode();
+    const [blob] = blobHandler.createObjectURs([
+      {
+        content: code,
+        extension: "js",
+        mimeType: "text/javascript",
+      },
+    ]);
+
+    this.insertJS(blob.url);
+    this.cleanups.push(() => blobHandler.revokeObjectURLs([blob.url]));
   }
 
   writeDocument() {
     if (this.componentName === null) {
       this.writeHTMLDocument();
+
+      return this.cleanups;
     }
 
     if (this.componentName !== null) {
       this.writeReactDocument();
     }
+
+    return this.cleanups;
   }
 }

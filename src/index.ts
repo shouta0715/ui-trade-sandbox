@@ -6,6 +6,7 @@ class IframeWorker {
   // eslint-disable-next-line class-methods-use-this
   run() {
     this.configure();
+    // eslint-disable-next-line no-console
     console.log("iframe worker is running");
   }
 

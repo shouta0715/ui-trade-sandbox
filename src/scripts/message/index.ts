@@ -1,4 +1,4 @@
-import { SuccessTransformedData } from "../../types/index";
+import { BlobInfo, SuccessTransformedData } from "../../types/index";
 import { BlobHandler } from "../blob/index";
 import { DocumentWriter } from "../dom/index";
 import { RenderObserver } from "../observer/index";
@@ -8,7 +8,9 @@ export class MessageHandler {
 
   private blobHandler: BlobHandler;
 
-  private blobURLs: string[] = [];
+  private blobs: BlobInfo[] = [];
+
+  private cleanups: (() => void)[] = [];
 
   constructor(private event: MessageEvent) {
     this.renderObserver = new RenderObserver();
@@ -20,14 +22,13 @@ export class MessageHandler {
       this.event.data
     ) as SuccessTransformedData;
 
-    const blobURLs = this.blobHandler.createObjectURs(files);
+    const blobs = this.blobHandler.createObjectURs(files);
 
-    this.blobURLs = blobURLs;
-
-    const mainBlobURL = blobURLs[0];
+    this.blobs = blobs;
+    const mainBlobURL = blobs[0].url;
 
     return {
-      blobURLs,
+      blobs,
       componentName,
       mainBlobURL,
     };
@@ -38,10 +39,11 @@ export class MessageHandler {
 
     const { componentName, mainBlobURL } = this.parseData();
 
-    this.writeDocument(componentName, mainBlobURL);
+    this.writeDocument(componentName, mainBlobURL, this.blobs);
 
     await this.postParentMessage();
-    this.blobHandler.revokeObjectURLs(this.blobURLs);
+    this.blobHandler.revokeObjectURLs(this.blobs.map((blob) => blob.url));
+    this.cleanups.forEach((cleanup) => cleanup());
   }
 
   private async postParentMessage() {
@@ -60,9 +62,15 @@ export class MessageHandler {
   }
 
   // eslint-disable-next-line class-methods-use-this
-  private writeDocument(componentName: string | null, mainBlobURL: string) {
-    const writer = new DocumentWriter(mainBlobURL, componentName);
+  private writeDocument(
+    componentName: string | null,
+    mainBlobURL: string,
+    blobURLs: BlobInfo[]
+  ) {
+    const writer = new DocumentWriter(mainBlobURL, componentName, blobURLs);
 
-    writer.writeDocument();
+    const cleanups = writer.writeDocument();
+
+    cleanups.forEach((cleanup) => this.cleanups.push(cleanup));
   }
 }

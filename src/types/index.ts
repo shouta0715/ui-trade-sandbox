@@ -19,3 +19,8 @@ export type SuccessTransformedData = {
   componentName: string | null;
   files: TransformedFile[];
 };
+
+export type BlobInfo = {
+  url: string;
+  extension: Extension;
+};
