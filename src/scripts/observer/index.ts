@@ -1,7 +1,7 @@
 export class RenderObserver {
-  private MAX_HEIGHT = 800;
+  private MAX_HEIGHT = 600;
 
-  private MIN_HEIGHT = 100;
+  private MIN_HEIGHT = 200;
 
   private OBSERVER_OPTIONS: MutationObserverInit = {
     attributes: true,
