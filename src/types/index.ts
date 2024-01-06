@@ -6,6 +6,9 @@ export const JAVASCRIPT_MIME_TYPE = "text/javascript" as const;
 export const RELOAD_ACTION = "reload" as const;
 export const RENDER_ACTION = "render" as const;
 
+export const EXPORT_DEFAULT_STYLE = "default" as const;
+export const EXPORT_NAMED_STYLE = "named" as const;
+
 type MIMETYPE =
   | typeof HTML_MIME_TYPE
   | typeof CSS_MIME_TYPE
@@ -20,9 +23,14 @@ export type TransformedFile = {
 
 export type MessageAction = typeof RELOAD_ACTION | typeof RENDER_ACTION;
 
+export type ExportStyle =
+  | typeof EXPORT_DEFAULT_STYLE
+  | typeof EXPORT_NAMED_STYLE;
+
 export type SuccessTransformedData =
   | {
       componentName: string | null;
+      exportStyle: ExportStyle | null;
       files: TransformedFile[];
       action: Extract<MessageAction, "render">;
     }

@@ -1,5 +1,6 @@
 import {
   BlobInfo,
+  ExportStyle,
   SuccessTransformedData,
   TransformedFile,
 } from "../../types/index";
@@ -17,6 +18,8 @@ export class MessageHandler {
   private cleanups: (() => void)[] = [];
 
   private componentName: string | null = null;
+
+  private exportStyle: ExportStyle | null = null;
 
   private mainBlobURL: string = "";
 
@@ -44,6 +47,7 @@ export class MessageHandler {
     this.componentName = data.componentName;
 
     this.files = data.files;
+    this.exportStyle = data.exportStyle;
 
     return {
       blobs,
@@ -127,6 +131,7 @@ export class MessageHandler {
       "render",
       this.mainBlobURL,
       this.componentName,
+      this.exportStyle,
       this.blobs
     );
 
@@ -140,6 +145,7 @@ export class MessageHandler {
       "reload",
       this.mainBlobURL,
       this.componentName,
+      this.exportStyle,
       this.blobs
     );
 

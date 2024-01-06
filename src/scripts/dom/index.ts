@@ -1,7 +1,7 @@
 /* eslint-disable no-param-reassign */
 /* eslint-disable class-methods-use-this */
 /* eslint-disable max-classes-per-file */
-import { BlobInfo, MessageAction } from "../../types";
+import { BlobInfo, ExportStyle, MessageAction } from "../../types";
 import { BlobHandler } from "../blob";
 
 class ElementHandler {
@@ -34,13 +34,18 @@ class ElementHandler {
 class ReactCodeHandler {
   constructor(
     private blobUrl: string,
-    private componentName: string
+    private componentName: string,
+    private exportStyle: ExportStyle
   ) {}
 
   private getImportStatement() {
     const reactImport = `import React from "https://esm.sh/react";\nimport { render } from "https://esm.sh/react-dom";\n`;
 
-    return `${reactImport}import ${this.componentName} from "${this.blobUrl}";\n`;
+    if (this.exportStyle === "default") {
+      return `${reactImport}import ${this.componentName} from "${this.blobUrl}";\n`;
+    }
+
+    return `${reactImport}import { ${this.componentName} } from "${this.blobUrl}";\n`;
   }
 
   private getRenderReact() {
@@ -68,6 +73,7 @@ export class DocumentWriter {
     private action: MessageAction,
     private mainBlobURL: string,
     private componentName?: string | null,
+    private exportStyle?: ExportStyle | null,
     private blobs: BlobInfo[] = []
   ) {}
 
@@ -136,10 +142,12 @@ export class DocumentWriter {
 
   private writeReactDocument() {
     if (!this.componentName) throw new Error("No component name");
+    if (!this.exportStyle) throw new Error("No export style");
 
     const reactCodeHandler = new ReactCodeHandler(
       this.mainBlobURL,
-      this.componentName
+      this.componentName,
+      this.exportStyle
     );
 
     const code = reactCodeHandler.renderReact();
