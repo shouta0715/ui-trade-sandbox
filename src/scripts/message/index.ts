@@ -56,23 +56,38 @@ export class MessageHandler {
   async onMessage(event: MessageEvent) {
     if (event.origin !== "http://localhost:3000") return;
 
-    const data = this.parseData(event);
+    try {
+      const { action } = this.parseData(event);
 
-    if (data.action === "reload") {
-      this.reWriteDocument();
-      await this.reloadPostParentMessage(event);
+      if (action === "reload") {
+        this.reWriteDocument();
+        await this.reloadPostParentMessage(event);
+      } else if (action === "render") {
+        this.writeDocument();
 
+        await this.renderPostParentMessage(event);
+      }
+    } catch (error) {
+      await this.onErrorMessage(event);
+      // eslint-disable-next-line no-console
+      console.error(error);
+    } finally {
       this.blobHandler.revokeObjectURLs(this.blobs.map((blob) => blob.url));
       this.cleanups.forEach((cleanup) => cleanup());
-
-      return;
     }
+  }
 
-    this.writeDocument();
+  // eslint-disable-next-line class-methods-use-this
+  private async onErrorMessage(event: MessageEvent) {
+    if (!event.source) throw new Error("No event source");
 
-    await this.renderPostParentMessage(event);
-    this.blobHandler.revokeObjectURLs(this.blobs.map((blob) => blob.url));
-    this.cleanups.forEach((cleanup) => cleanup());
+    const message = JSON.stringify({
+      error: true,
+    });
+
+    event.source.postMessage(message, {
+      targetOrigin: event.origin,
+    });
   }
 
   private async renderPostParentMessage(event: MessageEvent) {
@@ -83,6 +98,7 @@ export class MessageHandler {
     const message = JSON.stringify({
       height,
       message: "rendered",
+      error: false,
     });
 
     event.source.postMessage(message, {
@@ -97,6 +113,7 @@ export class MessageHandler {
 
     const message = JSON.stringify({
       message: "reload",
+      error: false,
     });
 
     event.source.postMessage(message, {
