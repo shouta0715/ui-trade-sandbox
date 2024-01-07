@@ -1,6 +1,8 @@
 import {
   BlobInfo,
   ExportStyle,
+  MessageAction,
+  ReceiveData,
   SuccessTransformedData,
   TransformedFile,
 } from "../../types/index";
@@ -25,6 +27,8 @@ export class MessageHandler {
 
   private files: TransformedFile[] = [];
 
+  private action: MessageAction | "unknown" = "unknown";
+
   constructor() {
     this.renderObserver = new RenderObserver();
     this.blobHandler = new BlobHandler();
@@ -42,6 +46,7 @@ export class MessageHandler {
 
     this.blobs = blobs;
     this.mainBlobURL = blobs[0].url;
+    this.action = data.action;
     if (data.action !== "render") return { action: data.action };
 
     this.componentName = data.componentName;
@@ -50,9 +55,6 @@ export class MessageHandler {
     this.exportStyle = data.exportStyle;
 
     return {
-      blobs,
-      componentName: data.componentName,
-      mainBlobURL: blobs[0].url,
       action: data.action,
     };
   }
@@ -85,9 +87,13 @@ export class MessageHandler {
   private async onErrorMessage(event: MessageEvent) {
     if (!event.source) throw new Error("No event source");
 
-    const message = JSON.stringify({
+    const messageData: ReceiveData = {
       error: true,
-    });
+      action: this.action,
+      message: "Unknown error",
+    };
+
+    const message = JSON.stringify(messageData);
 
     event.source.postMessage(message, {
       targetOrigin: event.origin,
@@ -96,14 +102,17 @@ export class MessageHandler {
 
   private async renderPostParentMessage(event: MessageEvent) {
     if (!event.source) throw new Error("No event source");
+    if (this.action === "unknown") throw new Error("Unknown action");
 
     const height = await this.renderObserver.stopCompleteRendered();
 
-    const message = JSON.stringify({
+    const messageData: ReceiveData = {
       height,
-      message: "rendered",
       error: false,
-    });
+      action: this.action,
+    };
+
+    const message = JSON.stringify(messageData);
 
     event.source.postMessage(message, {
       targetOrigin: event.origin,
@@ -112,13 +121,16 @@ export class MessageHandler {
 
   private async reloadPostParentMessage(event: MessageEvent) {
     if (!event.source) throw new Error("No event source");
+    if (this.action === "unknown") throw new Error("Unknown action");
 
     await this.renderObserver.stopCompleteRendered();
 
-    const message = JSON.stringify({
-      message: "reload",
+    const messageData: ReceiveData = {
       error: false,
-    });
+      action: this.action,
+    };
+
+    const message = JSON.stringify(messageData);
 
     event.source.postMessage(message, {
       targetOrigin: event.origin,

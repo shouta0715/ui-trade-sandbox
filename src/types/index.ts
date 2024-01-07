@@ -42,3 +42,15 @@ export type BlobInfo = {
   url: string;
   extension: Extension;
 };
+
+export type ReceiveData =
+  | {
+      height?: number;
+      error: false;
+      action: MessageAction;
+    }
+  | {
+      error: true;
+      action: MessageAction | "unknown";
+      message: string;
+    };
