@@ -179,6 +179,9 @@ export class DocumentWriter {
     });
 
     if (this.componentName === null) {
+      const root = document.querySelector("#root") as HTMLDivElement;
+      root.innerHTML = "";
+
       this.writeHTMLDocument();
 
       return this.cleanups;
