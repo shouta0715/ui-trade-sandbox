@@ -118,6 +118,7 @@ export class DocumentWriter {
             extension: blob.extension,
             content,
             url: blob.url,
+            id: blob.id,
           };
         })
       )
@@ -158,6 +159,7 @@ export class DocumentWriter {
         content: code,
         extension: "js",
         mimeType: "text/javascript",
+        id: "react",
       },
     ]);
 

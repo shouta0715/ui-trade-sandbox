@@ -29,6 +29,8 @@ export class MessageHandler {
 
   private action: MessageAction | "unknown" = "unknown";
 
+  private mainFileId: string = "";
+
   constructor() {
     this.renderObserver = new RenderObserver();
     this.blobHandler = new BlobHandler();
@@ -39,14 +41,21 @@ export class MessageHandler {
 
   private parseData(event: MessageEvent) {
     const data = JSON.parse(event.data) as SuccessTransformedData;
+    this.mainFileId =
+      data.action === "render" ? data.mainFileId : this.mainFileId;
 
     const blobs = this.blobHandler.createObjectURs(
       data.action === "render" ? data.files : this.files
     );
 
     this.blobs = blobs;
-    this.mainBlobURL = blobs[0].url;
+    const mainFileBlob = blobs.find((blob) => blob.id === this.mainFileId);
+
+    if (!mainFileBlob) throw new Error("No main file blob");
+
+    this.mainBlobURL = mainFileBlob.url;
     this.action = data.action;
+
     if (data.action !== "render") return { action: data.action };
 
     this.componentName = data.componentName;

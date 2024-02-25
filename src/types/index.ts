@@ -19,6 +19,7 @@ export type TransformedFile = {
   mimeType: MIMETYPE;
   extension: Extension;
   originallyExtension?: Extension;
+  id: string;
 };
 
 export type MessageAction = typeof RELOAD_ACTION | typeof RENDER_ACTION;
@@ -32,15 +33,18 @@ export type SuccessTransformedData =
       componentName: string | null;
       exportStyle: ExportStyle | null;
       files: TransformedFile[];
+      mainFileId: string;
       action: Extract<MessageAction, "render">;
     }
   | {
       action: Extract<MessageAction, "reload">;
+      mainFileId: string;
     };
 
 export type BlobInfo = {
   url: string;
   extension: Extension;
+  id: string;
 };
 
 export type ReceiveData =

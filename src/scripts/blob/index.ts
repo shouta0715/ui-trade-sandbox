@@ -9,6 +9,7 @@ export class BlobHandler {
       return {
         url: URL.createObjectURL(blob),
         extension: file.extension,
+        id: file.id,
       };
     });
   }
