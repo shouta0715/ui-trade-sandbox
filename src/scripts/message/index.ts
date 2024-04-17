@@ -35,7 +35,9 @@ export class MessageHandler {
     this.renderObserver = new RenderObserver();
     this.blobHandler = new BlobHandler();
     this.onMessage = this.onMessage.bind(this);
+  }
 
+  start() {
     this.configure();
   }
 
@@ -126,6 +128,8 @@ export class MessageHandler {
     event.source.postMessage(message, {
       targetOrigin: event.origin,
     });
+
+    console.log("message sent");
   }
 
   private async reloadPostParentMessage(event: MessageEvent) {
@@ -177,5 +181,23 @@ export class MessageHandler {
 
   private configure() {
     window.addEventListener("message", this.onMessage, false);
+  }
+
+  async forceStop() {
+    // すべてのHTML要素を削除
+
+    const html = document.querySelector("html") as HTMLHtmlElement;
+
+    if (!html) throw new Error("No html");
+
+    html.innerHTML = "";
+
+    this.cleanups.forEach((cleanup) => cleanup());
+
+    this.cleanups = [];
+
+    await this.renderObserver.stopCompleteRendered();
+
+    window.removeEventListener("message", this.onMessage, false);
   }
 }

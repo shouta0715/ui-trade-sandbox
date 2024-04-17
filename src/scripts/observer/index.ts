@@ -1,3 +1,4 @@
+// eslint-disable-next-line max-classes-per-file
 export class RenderObserver {
   private MAX_HEIGHT = 600;
 
@@ -34,6 +35,27 @@ export class RenderObserver {
       });
 
       observer.observe(body, this.OBSERVER_OPTIONS);
+    });
+  }
+}
+export class WatchCSP {
+  private CSP_ID = "csp";
+
+  watchCSP(): Promise<void> {
+    return new Promise((_, reject) => {
+      const observer = new MutationObserver((__, ob) => {
+        // DOM内の変更を検出したときの処理
+        const csp = document.getElementById(this.CSP_ID);
+        if (!csp) {
+          ob.disconnect(); // 監視を停止
+          reject(new Error("CSP is removed")); // エラーをPromiseの拒否として扱う
+        }
+      });
+
+      observer.observe(document.head || document.documentElement, {
+        childList: true, // 子要素の追加や削除を監視
+        subtree: true, // 対象要素の全サブツリーを監視
+      });
     });
   }
 }
